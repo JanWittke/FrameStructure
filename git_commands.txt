@@ -1,4 +1,16 @@
+cd C:/Users/janib/Desktop/SemesterUoLJ/CP/PyCharm
 git status
 git add .
 git commit -m "BlaBla"
 git diff
+git log
+git log --oneline
+git log -p
+git reset #######
+:x
+git branch #FixSomething#
+git branch
+git switch #FixSomething#
+git merge -m "BlaBla"
+git branch -d #FixSomething#
+git branch -c #FixSomething2#
