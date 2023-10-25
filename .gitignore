@@ -3,4 +3,4 @@
 # ignore all.xml files
 *.xml
 # ignore all.iml files
-.iml
+*.iml

@@ -1,16 +1,25 @@
+clear				#clear
+:x				#exit
+q				#quit menu
+
 cd C:/Users/janib/Desktop/SemesterUoLJ/CP/PyCharm
-git status
-git add .
-git commit -m "BlaBla"
-git diff
-git log
-git log --oneline
+
+git status			#status request
+git add .			#add all changed docuements
+git commit -m "BlaBla"		#commit all documents (or a single one) and write a message
+git diff			#see what was changed
+git log				#see information about commites the 
+git log --oneline		
 git log -p
-git reset #######
-:x
-git branch #FixSomething#
-git branch
-git switch #FixSomething#
-git merge -m "BlaBla"
-git branch -d #FixSomething#
-git branch -c #FixSomething2#
+git reset #######		#-number stands for specific versions
+git branch #FixSomething#	#create new branch
+git branch			
+git switch #FixSomething#	#switch to a branch
+git merge -m "BlaBla"		#merge with comment
+git branch -d #FixSomething#	#delete branche
+git branch -c #FixSomething2#	#create new branch?
+
+for interaction with GitHub
+git push			#upload
+git fetch			#download
+git merge 			#merge
