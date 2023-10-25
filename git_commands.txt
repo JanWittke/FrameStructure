@@ -1,3 +1,4 @@
 git status
 git add .
-git commid - "BlaBla"
+git commit -m "BlaBla"
+git diff
