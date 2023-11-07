@@ -223,8 +223,8 @@ round_Normal_force_P_wd = [round(num, 2) for num in Normal_force_P_wd]
 #print("                 constant, constant, constant, constant")
 
 # We are looking for the maximal internal forces ==============================================================================================
-# Load combination 1 -> Snow as relevent force
-# Load combination 2 -> Wind as relevent force
+# Load combination 1 -> Snow as relevant force
+# Load combination 2 -> Wind as relevant force
 # First for the moment =======================================================================================================================
 
 round_Moment_P_wd_60 = [i * 0.6 for i in round_Moment_P_wd]
@@ -381,3 +381,248 @@ print("The internal forces in the pillar are: M_max =",Internal_forces_pillar[0]
 
 Truss_MQN = Internal_forces_truss
 Pillar_MQN = Internal_forces_pillar
+
+#================================================================================================================================================================================
+#================================================================================================================================================================================
+#================================================================================================================================================================================
+# Import Profile list for the truss
+
+import pandas
+IPE = []
+IPE = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\IPE-profiles.xlsx")
+HEA = []
+HEA = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\HEA-profiles.xlsx")
+HEB = []
+HEB = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\HEB-profiles.xlsx")
+
+
+M_Ed = Truss_MQN[0]*1.2 #Increase of 20% for later reserves
+
+# Starting with IPE
+
+W_pl_vector_IPE = []
+
+num_rows_IPE = IPE.shape[0]
+num_rows_IPE = int(num_rows_IPE)
+
+for i in range(num_rows_IPE):
+    S_x = IPE.iat[i, 16]#
+    W_pl = float(2*S_x)
+    row_number = IPE.iat[i, 0]
+    profile = IPE.iat[i, 1]
+    mass = IPE.iat[i, 8]
+    W_pl_vector_IPE = [row_number,profile,W_pl,mass]
+
+    M_cRD = (W_pl) * 23.5 / 100
+    eta = M_Ed/M_cRD
+    Eta_IPE = round(eta, 2)  # Round to two decimal
+
+    if Eta_IPE <= 1:
+        break
+
+#print(Eta_IPE)
+#print(W_pl_vector_IPE)
+
+
+# Same for HEA
+
+W_pl_vector_HEA = []
+
+num_rows_HEA = HEA.shape[0]
+num_rows_HEA = int(num_rows_HEA)
+
+for i in range(num_rows_HEA):
+    S_x = HEA.iat[i, 16]#
+    W_pl = float(2*S_x)
+    row_number = HEA.iat[i, 0]
+    profile = HEA.iat[i, 1]
+    mass = HEA.iat[i, 8]
+    W_pl_vector_HEA = [row_number,profile,W_pl,mass]
+
+    M_cRD = (W_pl) * 23.5 / 100
+    eta = M_Ed/M_cRD
+    Eta_HEA = round(eta, 2)  # Round to two decimal
+
+    if Eta_HEA <= 1:
+        break
+
+#print(Eta_HEA)
+#print(W_pl_vector_HEA)
+
+
+# Same for HEB
+
+W_pl_vector_HEB = []
+
+num_rows_HEB = HEB.shape[0]
+num_rows_HEB = int(num_rows_HEB)
+
+for i in range(num_rows_HEB):
+    S_x = HEB.iat[i, 16]#
+    W_pl = float(2*S_x)
+    row_number = HEB.iat[i, 0]
+    profile = HEB.iat[i, 1]
+    mass = HEB.iat[i, 8]
+    W_pl_vector_HEB = [row_number,profile,W_pl,mass]
+
+    M_cRD = (W_pl) * 23.5 / 100
+    eta = M_Ed/M_cRD
+    Eta_HEB = round(eta, 2)  # Round to two decimal
+
+    if Eta_HEB <= 1:
+        break
+
+#print(Eta_HEB)
+#print(W_pl_vector_HEB)
+
+if Eta_IPE <= 1 and Eta_HEA <= 1 and Eta_HEB <= 1:
+    print("You can now choose a profile for the truss: IPE",W_pl_vector_IPE[1],"or HEA",W_pl_vector_HEA[1],"or HEB",W_pl_vector_HEB[1],)
+    print("Write IPE or HEA or HEB to choose a profile!")
+
+    profile_choice = input("Your profile choice: ")
+
+    if profile_choice == "IPE":
+        print("You choice is IPE",W_pl_vector_IPE[1],)
+        W_pl_choice = W_pl_vector_IPE[2]
+
+    elif profile_choice == "HEA":
+        print("You choice is HEA",W_pl_vector_HEA[1],)
+        W_pl_choice = W_pl_vector_HEA[2]
+
+    elif profile_choice == "HEB":
+        print("You choice is HEB",W_pl_vector_HEB[1],)
+        W_pl_choice = W_pl_vector_HEB[2]
+
+    else:
+        print("Invalid entry. Please enter IPE or HEA or HEB!")
+
+elif Eta_HEA <= 1 and Eta_HEB <= 1:
+    print("You can now choose a profile for the truss: HEA",W_pl_vector_HEA[1], "or HEB",W_pl_vector_HEB[1],)
+    print("Write HEA or HEB to choose a profile!")
+
+    profile_choice = input("Your profile choice: ")
+
+    if profile_choice == "HEA":
+        print("You choice is HEA",W_pl_vector_HEA[1],)
+        W_pl_choice = W_pl_vector_HEA[2]
+
+    elif profile_choice == "HEB":
+        print("You choice is HEB",W_pl_vector_HEB[1],)
+        W_pl_choice = W_pl_vector_HEB[2]
+
+    else:
+        print("Invalid entry. Please enter HEA or HEB!")
+
+elif Eta_HEB <= 1:
+    print("You can now choose as profile for the truss: HEB",W_pl_vector_HEB[1],)
+    print("Automatic selection of HEB",W_pl_vector_HEB[1],)
+    W_pl_choice = W_pl_vector_HEB[2]
+
+else:
+    print("Your internal forces are to high!")
+
+
+print("Now the programm will add the selfweight of the choosen profile.")
+print( "Lets see if we can stay with this profile or do we have to take another one!?")
+
+# Add the self weight
+
+g_k_roof = 0.5 * L_section #kN/m
+
+if profile_choice == "IPE":
+    g_k_profile = (W_pl_vector_IPE[3]*9.81/1000)
+elif profile_choice == "HEA":
+    g_k_profile = (W_pl_vector_HEA[3]*9.81/1000)
+elif profile_choice == "HEB":
+    g_k_profile = (W_pl_vector_HEB[3]*9.81/1000)
+
+gd = 1.35 * (g_k_roof+g_k_profile)
+
+print("g_d is:",gd,)
+
+factor = gd/sd                      # this factor will make following calculations more simple
+
+
+Moment_P_gd = [i * factor for i in Moment_P_sd]
+Moment_P_gd = [-i if i <0 else i for i in Moment_P_gd]
+
+Shear_force_P_gd = [i * factor for i in Shear_force_P_sd]
+Shear_force_P_gd = [-i if i <0 else i for i in Shear_force_P_gd]
+
+Normal_force_P_gd = [i * factor for i in Normal_force_P_sd]
+Normal_force_P_gd = [-i if i <0 else i for i in Normal_force_P_gd]
+
+M_d_new = [x + y for x, y in zip(M_d, Moment_P_gd)]
+Q_d_new = [x + y for x, y in zip(Q_d, Shear_force_P_gd)]
+N_d_new = [x + y for x, y in zip(N_d, Normal_force_P_gd)]
+
+
+M_max_value_truss_new = max(M_d_new[2:5])
+Q_max_value_truss_new = max(Q_d_new[2:5])
+N_max_value_truss_new = max(N_d_new[2:5])
+
+Truss_MQN_new = [M_max_value_truss_new,Q_max_value_truss_new,N_max_value_truss_new]
+Truss_MQN_new = [round(num, 2) for num in Truss_MQN_new]
+
+print(Truss_MQN)
+print(Truss_MQN_new)
+
+
+M_Ed_new = Truss_MQN_new[0]
+M_cRD_new = (W_pl_choice) * 23.5 / 100
+eta_new = M_Ed_new / M_cRD_new
+Eta_new = round(eta_new, 2)  # Round to two decimal
+
+print(Eta_new)
+
+if Eta_new >= 0.9:
+    print("Eta is too high! We choose a new profile!")
+    if profile_choice == "IPE":
+        W_pl_vector_IPE = []
+
+        num_rows_IPE = IPE.shape[0]
+        num_rows_IPE = int(num_rows_IPE)
+
+        for i in range(num_rows_IPE):
+            S_x = IPE.iat[i, 16]  #
+            W_pl = float(2 * S_x)
+            row_number = IPE.iat[i, 0]
+            profile = IPE.iat[i, 1]
+            mass = IPE.iat[i, 8]
+            W_pl_vector_IPE = [row_number, profile, W_pl, mass]
+
+            M_cRD = (W_pl) * 23.5 / 100
+            eta = M_Ed_new / M_cRD
+            Eta_IPE_NEW = round(eta, 2)  # Round to two decimal
+
+
+            if Eta_IPE_NEW <=0.9:
+                break
+        print("Now we have Eta =",Eta_IPE_NEW, "for IPE",W_pl_vector_IPE[1],)
+
+    if profile_choice == "HEA":
+        W_pl_vector_HEA = []
+
+        num_rows_HEA = HEA.shape[0]
+        num_rows_HEA = int(num_rows_HEA)
+
+        for i in range(num_rows_HEA):
+            S_x = HEA.iat[i, 16]  #
+            W_pl = float(2 * S_x)
+            row_number = HEA.iat[i, 0]
+            profile = HEA.iat[i, 1]
+            mass = HEA.iat[i, 8]
+            W_pl_vector_HEA = [row_number, profile, W_pl, mass]
+
+            M_cRD = (W_pl) * 23.5 / 100
+            eta = M_Ed_new / M_cRD
+            Eta_HEA_NEW = round(eta, 2)  # Round to two decimal
+
+            if Eta_HEA_NEW <= 0.9:
+                break
+        print("Now we have Eta =", Eta_HEA_NEW, "for HEA", W_pl_vector_HEA[1], )
+
+else:
+    print("Congrats: We can take the choosen profile!")
+
+
