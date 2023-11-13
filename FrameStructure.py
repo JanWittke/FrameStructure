@@ -387,7 +387,17 @@ Pillar_MQN = Internal_forces_pillar
 #================================================================================================================================================================================
 # Import Profile list for the truss
 
+gk =  input("Enter now the own weight of the roof g_k in [kN/m2]: (g_k): ")
+gk = float(gk)
+gk_roof = gk * L_section #kN/m
+print(gk_roof)
+
 import pandas
+
+
+
+import numpy
+
 IPE = []
 IPE = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\IPE-profiles.xlsx")
 HEA = []
@@ -395,234 +405,404 @@ HEA = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\HEA-pro
 HEB = []
 HEB = pandas.read_excel(r"C:\Users\janib\Desktop\SemesterUoLJ\CP\PyCharm\HEB-profiles.xlsx")
 
+#print(IPE)
 
-M_Ed = Truss_MQN[0]*1.2 #Increase of 20% for later reserves
+# Starting with IPE =================================================================================================
+# Zuerst wird das Eigengewicht ermittelt
+# Dieses besteht aus dem Eigengewicht des Profils (gk_vektor_IPE) und der Dachkonstruktion (gk_vektor_roof)
 
-# Starting with IPE
-
-W_pl_vector_IPE = []
+mass_vektor_IPE = []
+gk_vektor_roof = []
+sd_vektor = []
 
 num_rows_IPE = IPE.shape[0]
 num_rows_IPE = int(num_rows_IPE)
 
 for i in range(num_rows_IPE):
-    S_x = IPE.iat[i, 16]#
-    W_pl = float(2*S_x)
-    row_number = IPE.iat[i, 0]
-    profile = IPE.iat[i, 1]
     mass = IPE.iat[i, 8]
-    W_pl_vector_IPE = [row_number,profile,W_pl,mass]
-
-    M_cRD = (W_pl) * 23.5 / 100
-    eta = M_Ed/M_cRD
-    Eta_IPE = round(eta, 2)  # Round to two decimal
-
-    if Eta_IPE <= 1:
-        break
-
-#print(Eta_IPE)
-#print(W_pl_vector_IPE)
+    mass_vektor_IPE.append(mass)
+    gk_vektor_roof.append(gk_roof)
+    sd_vektor.append(sd)
 
 
-# Same for HEA
+gk_vektor_IPE = []
+factor_gk = 9.81/1000
 
-W_pl_vector_HEA = []
+for value in mass_vektor_IPE:
+    new_value = value * factor_gk
+    gk_vektor_IPE.append(new_value)
 
-num_rows_HEA = HEA.shape[0]
+gk_vektor_IPE = [round(num, 2) for num in gk_vektor_IPE]
+
+gk_vektor = [a + b for a, b in zip(gk_vektor_IPE, gk_vektor_roof)]
+
+gd_vektor = []
+for value in gk_vektor:
+    new_value = value * 1.35
+    gd_vektor.append(new_value)
+gd_vektor = [round(num, 2) for num in gd_vektor]
+
+#print(gd_vektor)
+
+num_factor_vektor = IPE.shape[0]
+
+# Das Eigengewicht ist nun als Liste für alle Profile abgespeichert
+# Im nächsten Schritt werden für alle Profile die neuen Schnittgrößen berechnet
+
+factor_vektor = []
+factor_vektor = [a / b for a, b in zip(gd_vektor, sd_vektor)]
+factor_vektor = [round(num, 3) for num in factor_vektor]
+
+#print(num_factor_vektor)
+#print(len(factor_vektor))
+#print(factor_vektor)
+
+#print(factor_vektor)
+
+# This is a lot of code, so I will store it in a function
+
+def Internal_Forces_Matrix(factor_vektor,num_factor_vektor):
+    # For the Moment===========================================================================================================================================================
+
+    num_factor_vektor = int(num_factor_vektor)
+    abs_Moment_P_gd_matrix = []
+    M_d_matrix = []
+
+    for i in range(num_factor_vektor):
+        factor = factor_vektor[i]
+        Moment_P_gd = [i * factor for i in Moment_P_sd]
+        Moment_P_gd = [round(num, 2) for num in Moment_P_gd]
+        abs_Moment_P_gd = [-i if i < 0 else i for i in Moment_P_gd]
+        abs_Moment_P_gd_matrix.append(abs_Moment_P_gd)
+        M_d_matrix.append(M_d)
+
+    # print(abs_Moment_P_gd_matrix)
+    # print(M_d_matrix)
+
+    M_d_new_matrix = [[abs_Moment_P_gd_matrix[i][j] + M_d_matrix[i][j] for j in range(len(abs_Moment_P_gd_matrix[0]))]
+                      for i in range(len(abs_Moment_P_gd_matrix))]
+
+    # for row in M_d_new_matrix:
+    #   print(row)
+    # print(M_d_new_matrix)
+
+    max_values = [max(row[2:5]) for row in M_d_new_matrix]
+    m_max_values = [round(num, 3) for num in max_values]
+
+    # print(m_max_values)
+
+    # For the Shear Force===========================================================================================================================================================
+
+    num_factor_vektor = int(num_factor_vektor)
+    abs_Shear_force_P_gd_matrix = []
+    Q_d_matrix = []
+
+    for i in range(num_factor_vektor):
+        factor = factor_vektor[i]
+        Shear_force_P_gd = [i * factor for i in Shear_force_P_sd]
+        Shear_force_P_gd = [round(num, 2) for num in Shear_force_P_gd]
+        abs_Shear_force_P_gd = [-i if i < 0 else i for i in Shear_force_P_gd]
+        abs_Shear_force_P_gd_matrix.append(abs_Shear_force_P_gd)
+        Q_d_matrix.append(Q_d)
+
+    # print(abs_Shear_force_P_gd_matrix)
+    # print(Q_d_matrix)
+
+    Q_d_new_matrix = [
+        [abs_Shear_force_P_gd_matrix[i][j] + Q_d_matrix[i][j] for j in range(len(abs_Shear_force_P_gd_matrix[0]))] for i
+        in range(len(abs_Shear_force_P_gd_matrix))]
+
+    # for row in Q_d_new_matrix:
+    #   print(row)
+    # print(Q_d_new_matrix)
+
+    max_values = [max(row[2:5]) for row in Q_d_new_matrix]
+    q_max_values = [round(num, 3) for num in max_values]
+
+    # print(m_max_values)
+
+    # For the Axial Force===========================================================================================================================================================
+
+    num_factor_vektor = int(num_factor_vektor)
+    abs_Normal_force_P_gd_matrix = []
+    N_d_matrix = []
+
+    for i in range(num_factor_vektor):
+        factor = factor_vektor[i]
+        Normal_force_P_gd = [i * factor for i in Normal_force_P_sd]
+        Normal_force_P_gd = [round(num, 2) for num in Normal_force_P_gd]
+        abs_Normal_force_P_gd = [-i if i < 0 else i for i in Normal_force_P_gd]
+        abs_Normal_force_P_gd_matrix.append(abs_Normal_force_P_gd)
+        N_d_matrix.append(N_d)
+
+    # print(abs_Normal_force_P_gd_matrix)
+    # print(N_d_matrix)
+
+    N_d_new_matrix = [
+        [abs_Normal_force_P_gd_matrix[i][j] + N_d_matrix[i][j] for j in range(len(abs_Normal_force_P_gd_matrix[0]))] for
+        i in range(len(abs_Normal_force_P_gd_matrix))]
+
+    # for row in N_d_new_matrix:
+    #   print(row)
+    # print(n_d_new_matrix)
+
+    max_values = [max(row[2:5]) for row in N_d_new_matrix]
+    n_max_values = [round(num, 3) for num in max_values]
+
+    return m_max_values, q_max_values, n_max_values #return the 3 important lists
+
+    # print(N_max_values)
+
+    # end of def - function
+
+#Internal_Forces_Matrix()
+Result_IPE = []
+Result_IPE = Internal_Forces_Matrix(factor_vektor,num_factor_vektor)
+
+M_max_values, Q_max_values, N_max_values = Result_IPE
+
+Truss_MQN_Matrix_IPE = [M_max_values,Q_max_values,N_max_values]
+Truss_MQN_Matrix_IPE = [list(row) for row in zip(*Truss_MQN_Matrix_IPE)]
+
+#for row in Truss_MQN_Matrix_IPE:
+ #   print(row)
+
+# Now for HEA =========================================================================================================
+
+mass_vektor_HEA = []
+num_rows_HEA =HEA.shape[0]
 num_rows_HEA = int(num_rows_HEA)
+gk_vektor_roof = []
+sd_vektor = []
+
 
 for i in range(num_rows_HEA):
-    S_x = HEA.iat[i, 16]#
-    W_pl = float(2*S_x)
-    row_number = HEA.iat[i, 0]
-    profile = HEA.iat[i, 1]
     mass = HEA.iat[i, 8]
-    W_pl_vector_HEA = [row_number,profile,W_pl,mass]
+    mass_vektor_HEA.append(mass)
+    gk_vektor_roof.append(gk_roof)
+    sd_vektor.append(sd)
 
-    M_cRD = (W_pl) * 23.5 / 100
-    eta = M_Ed/M_cRD
-    Eta_HEA = round(eta, 2)  # Round to two decimal
+gk_vektor_HEA = []
+factor_gk = 9.81/1000
 
-    if Eta_HEA <= 1:
-        break
+for value in mass_vektor_HEA:
+    new_value = value * factor_gk
+    gk_vektor_HEA.append(new_value)
 
-#print(Eta_HEA)
-#print(W_pl_vector_HEA)
+gk_vektor_HEA = [round(num, 2) for num in gk_vektor_HEA]
+
+gk_vektor = [a + b for a, b in zip(gk_vektor_HEA, gk_vektor_roof)]
+
+gd_vektor = []
+for value in gk_vektor:
+    new_value = value * 1.35
+    gd_vektor.append(new_value)
+gd_vektor = [round(num, 2) for num in gd_vektor]
+
+#print(gd_vektor)
+
+num_factor_vektor = HEA.shape[0]
+
+factor_vektor = []
+factor_vektor = [a / b for a, b in zip(gd_vektor, sd_vektor)]
+factor_vektor = [round(num, 3) for num in factor_vektor]
+
+#print(num_factor_vektor)
+#print(len(factor_vektor))
+#print(factor_vektor)
+
+# take results from same function
+Internal_Forces_Matrix(factor_vektor,num_factor_vektor)
+Result_HEA = []
+Result_HEA = Internal_Forces_Matrix(factor_vektor,num_factor_vektor)
+
+M_max_values, Q_max_values, N_max_values = Result_HEA
+
+Truss_MQN_Matrix_HEA = [M_max_values,Q_max_values,N_max_values]
+Truss_MQN_Matrix_HEA = [list(row) for row in zip(*Truss_MQN_Matrix_HEA)]
+
+#for row in Truss_MQN_Matrix_HEA:
+ #   print(row)
 
 
-# Same for HEB
+# Now for HEB =========================================================================================================
 
-W_pl_vector_HEB = []
-
-num_rows_HEB = HEB.shape[0]
+mass_vektor_HEB = []
+num_rows_HEB =HEB.shape[0]
 num_rows_HEB = int(num_rows_HEB)
+gk_vektor_roof = []
+sd_vektor = []
+
 
 for i in range(num_rows_HEB):
-    S_x = HEB.iat[i, 16]#
-    W_pl = float(2*S_x)
-    row_number = HEB.iat[i, 0]
-    profile = HEB.iat[i, 1]
     mass = HEB.iat[i, 8]
-    W_pl_vector_HEB = [row_number,profile,W_pl,mass]
+    mass_vektor_HEB.append(mass)
+    gk_vektor_roof.append(gk_roof)
+    sd_vektor.append(sd)
 
-    M_cRD = (W_pl) * 23.5 / 100
-    eta = M_Ed/M_cRD
-    Eta_HEB = round(eta, 2)  # Round to two decimal
+gk_vektor_HEB = []
+factor_gk = 9.81/1000
 
-    if Eta_HEB <= 1:
+for value in mass_vektor_HEB:
+    new_value = value * factor_gk
+    gk_vektor_HEB.append(new_value)
+
+gk_vektor_HEB = [round(num, 2) for num in gk_vektor_HEB]
+
+gk_vektor = [a + b for a, b in zip(gk_vektor_HEB, gk_vektor_roof)]
+
+gd_vektor = []
+for value in gk_vektor:
+    new_value = value * 1.35
+    gd_vektor.append(new_value)
+gd_vektor = [round(num, 2) for num in gd_vektor]
+
+#print(gd_vektor)
+
+num_factor_vektor = HEB.shape[0]
+
+factor_vektor = []
+factor_vektor = [a / b for a, b in zip(gd_vektor, sd_vektor)]
+factor_vektor = [round(num, 3) for num in factor_vektor]
+
+#print(num_factor_vektor)
+#print(len(factor_vektor))
+#print(factor_vektor)
+
+# take results from same function
+Internal_Forces_Matrix(factor_vektor,num_factor_vektor)
+Result_HEB = []
+Result_HEB = Internal_Forces_Matrix(factor_vektor,num_factor_vektor)
+
+M_max_values, Q_max_values, N_max_values = Result_HEB
+
+Truss_MQN_Matrix_HEB = [M_max_values,Q_max_values,N_max_values]
+Truss_MQN_Matrix_HEB = [list(row) for row in zip(*Truss_MQN_Matrix_HEB)]
+
+#for row in Truss_MQN_Matrix_HEB:
+ #   print(row)
+
+#=====================================================================================================================
+#=====================================================================================================================
+#=====================================================================================================================
+# Now starting with the first Static proof to find a profile you can choose
+print("You can choose for the truss one of the three profiles:")
+# starting with IPE again
+
+count = 0
+Eta_IPE_vektor = []
+
+for i in range(num_rows_IPE, 0, -1):
+    i = i-1
+    #print(i)
+    M_Ed_variable = Truss_MQN_Matrix_IPE[i][0]
+    #print(M_Ed_variable)
+    S_x = IPE.iat[i, 16]
+    W_pl_variable = float(2*S_x)
+    M_cRD_variable = W_pl_variable * 23.5 / 100
+    #print(M_cRD_variable)
+    eta_IPE = M_Ed_variable / M_cRD_variable
+    Eta_IPE = round(eta_IPE, 2)  # Round to two decimal
+    #print(Eta_IPE)
+
+
+    Eta_IPE_vektor.append(Eta_IPE)
+    count += 1
+
+    if Eta_IPE >= 0.9:
         break
 
-#print(Eta_HEB)
-#print(W_pl_vector_HEB)
+profile_number_IPE = num_rows_IPE - count + 1
+eta_number = count-2
+#print(Eta_IPE_vektor)
+print("IPE",IPE.iat[profile_number_IPE, 1],"with eta =",Eta_IPE_vektor[eta_number],)
 
-if Eta_IPE <= 1 and Eta_HEA <= 1 and Eta_HEB <= 1:
-    print("You can now choose a profile for the truss: IPE",W_pl_vector_IPE[1],"or HEA",W_pl_vector_HEA[1],"or HEB",W_pl_vector_HEB[1],)
-    print("Write IPE or HEA or HEB to choose a profile!")
+# same for HEA
 
-    profile_choice = input("Your profile choice: ")
+count = 0
+Eta_HEA_vektor = []
 
-    if profile_choice == "IPE":
-        print("You choice is IPE",W_pl_vector_IPE[1],)
-        W_pl_choice = W_pl_vector_IPE[2]
-
-    elif profile_choice == "HEA":
-        print("You choice is HEA",W_pl_vector_HEA[1],)
-        W_pl_choice = W_pl_vector_HEA[2]
-
-    elif profile_choice == "HEB":
-        print("You choice is HEB",W_pl_vector_HEB[1],)
-        W_pl_choice = W_pl_vector_HEB[2]
-
-    else:
-        print("Invalid entry. Please enter IPE or HEA or HEB!")
-
-elif Eta_HEA <= 1 and Eta_HEB <= 1:
-    print("You can now choose a profile for the truss: HEA",W_pl_vector_HEA[1], "or HEB",W_pl_vector_HEB[1],)
-    print("Write HEA or HEB to choose a profile!")
-
-    profile_choice = input("Your profile choice: ")
-
-    if profile_choice == "HEA":
-        print("You choice is HEA",W_pl_vector_HEA[1],)
-        W_pl_choice = W_pl_vector_HEA[2]
-
-    elif profile_choice == "HEB":
-        print("You choice is HEB",W_pl_vector_HEB[1],)
-        W_pl_choice = W_pl_vector_HEB[2]
-
-    else:
-        print("Invalid entry. Please enter HEA or HEB!")
-
-elif Eta_HEB <= 1:
-    print("You can now choose as profile for the truss: HEB",W_pl_vector_HEB[1],)
-    print("Automatic selection of HEB",W_pl_vector_HEB[1],)
-    W_pl_choice = W_pl_vector_HEB[2]
-
-else:
-    print("Your internal forces are to high!")
+for i in range(num_rows_HEA, 0, -1):
+    i = i-1
+    #print(i)
+    M_Ed_variable = Truss_MQN_Matrix_HEA[i][0]
+    #print(M_Ed_variable)
+    S_x = HEA.iat[i, 16]
+    W_pl_variable = float(2*S_x)
+    M_cRD_variable = W_pl_variable * 23.5 / 100
+    #print(M_cRD_variable)
+    eta_HEA = M_Ed_variable / M_cRD_variable
+    Eta_HEA = round(eta_HEA, 2)  # Round to two decimal
+    #print(Eta_HEA)
 
 
-print("Now the programm will add the selfweight of the choosen profile.")
-print( "Lets see if we can stay with this profile or do we have to take another one!?")
+    Eta_HEA_vektor.append(Eta_HEA)
+    count += 1
 
-# Add the self weight
+    if Eta_HEA >= 0.9:
+        break
 
-g_k_roof = 0.5 * L_section #kN/m
+profile_number_HEA = num_rows_HEA - count + 1
+eta_number = count-2
+#print(Eta_HEA_vektor)
+print("HEA",HEA.iat[profile_number_HEA, 1],"with eta =",Eta_HEA_vektor[eta_number],)
+
+# same for HEB
+
+count = 0
+Eta_HEB_vektor = []
+
+for i in range(num_rows_HEB, 0, -1):
+    i = i-1
+    #print(i)
+    M_Ed_variable = Truss_MQN_Matrix_HEB[i][0]
+    #print(M_Ed_variable)
+    S_x = HEB.iat[i, 16]
+    W_pl_variable = float(2*S_x)
+    M_cRD_variable = W_pl_variable * 23.5 / 100
+    #print(M_cRD_variable)
+    eta_HEB = M_Ed_variable / M_cRD_variable
+    Eta_HEB = round(eta_HEB, 2)  # Round to two decimal
+    #print(Eta_HEB)
+
+
+    Eta_HEB_vektor.append(Eta_HEB)
+    count += 1
+
+    if Eta_HEB >= 0.9:
+        break
+
+profile_number_HEB = num_rows_HEB - count + 1
+eta_number = count-2
+#print(Eta_HEB_vektor)
+print("HEB",HEB.iat[profile_number_HEA, 1],"with eta =",Eta_HEB_vektor[eta_number],)
+
+# Choose a profile now
+print("You can now choose a profile for the truss: IPE", IPE.iat[profile_number_IPE, 1], "or HEA", HEA.iat[profile_number_HEA, 1], "or HEB",
+      HEB.iat[profile_number_HEB, 1], )
+print("Write IPE or HEA or HEB to choose a profile!")
+
+profile_choice = input("Your profile choice: ")
 
 if profile_choice == "IPE":
-    g_k_profile = (W_pl_vector_IPE[3]*9.81/1000)
+    print("You choice is IPE", IPE.iat[profile_number_IPE, 1], )
+    print("The internal forces with g_d are: M_max =",Truss_MQN_Matrix_IPE[profile_number_IPE][0],"kNm; Q_max =",Truss_MQN_Matrix_IPE[profile_number_IPE][1],"kN; N_max =",-Truss_MQN_Matrix_IPE[profile_number_IPE][2],"kN !")
+
+
 elif profile_choice == "HEA":
-    g_k_profile = (W_pl_vector_HEA[3]*9.81/1000)
+    print("You choice is HEA", HEA.iat[profile_number_HEA, 1], )
+    print("The internal forces with g_d are: M_max =",Truss_MQN_Matrix_HEA[profile_number_HEA][0],"kNm; Q_max =",Truss_MQN_Matrix_HEA[profile_number_HEA][1],"kN; N_max =",-Truss_MQN_Matrix_HEA[profile_number_HEA][2],"kN !")
+
 elif profile_choice == "HEB":
-    g_k_profile = (W_pl_vector_HEB[3]*9.81/1000)
-
-gd = 1.35 * (g_k_roof+g_k_profile)
-
-print("g_d is:",gd,)
-
-factor = gd/sd                      # this factor will make following calculations more simple
-
-
-Moment_P_gd = [i * factor for i in Moment_P_sd]
-Moment_P_gd = [-i if i <0 else i for i in Moment_P_gd]
-
-Shear_force_P_gd = [i * factor for i in Shear_force_P_sd]
-Shear_force_P_gd = [-i if i <0 else i for i in Shear_force_P_gd]
-
-Normal_force_P_gd = [i * factor for i in Normal_force_P_sd]
-Normal_force_P_gd = [-i if i <0 else i for i in Normal_force_P_gd]
-
-M_d_new = [x + y for x, y in zip(M_d, Moment_P_gd)]
-Q_d_new = [x + y for x, y in zip(Q_d, Shear_force_P_gd)]
-N_d_new = [x + y for x, y in zip(N_d, Normal_force_P_gd)]
-
-
-M_max_value_truss_new = max(M_d_new[2:5])
-Q_max_value_truss_new = max(Q_d_new[2:5])
-N_max_value_truss_new = max(N_d_new[2:5])
-
-Truss_MQN_new = [M_max_value_truss_new,Q_max_value_truss_new,N_max_value_truss_new]
-Truss_MQN_new = [round(num, 2) for num in Truss_MQN_new]
-
-print(Truss_MQN)
-print(Truss_MQN_new)
-
-
-M_Ed_new = Truss_MQN_new[0]
-M_cRD_new = (W_pl_choice) * 23.5 / 100
-eta_new = M_Ed_new / M_cRD_new
-Eta_new = round(eta_new, 2)  # Round to two decimal
-
-print(Eta_new)
-
-if Eta_new >= 0.9:
-    print("Eta is too high! We choose a new profile!")
-    if profile_choice == "IPE":
-        W_pl_vector_IPE = []
-
-        num_rows_IPE = IPE.shape[0]
-        num_rows_IPE = int(num_rows_IPE)
-
-        for i in range(num_rows_IPE):
-            S_x = IPE.iat[i, 16]  #
-            W_pl = float(2 * S_x)
-            row_number = IPE.iat[i, 0]
-            profile = IPE.iat[i, 1]
-            mass = IPE.iat[i, 8]
-            W_pl_vector_IPE = [row_number, profile, W_pl, mass]
-
-            M_cRD = (W_pl) * 23.5 / 100
-            eta = M_Ed_new / M_cRD
-            Eta_IPE_NEW = round(eta, 2)  # Round to two decimal
-
-
-            if Eta_IPE_NEW <=0.9:
-                break
-        print("Now we have Eta =",Eta_IPE_NEW, "for IPE",W_pl_vector_IPE[1],)
-
-    if profile_choice == "HEA":
-        W_pl_vector_HEA = []
-
-        num_rows_HEA = HEA.shape[0]
-        num_rows_HEA = int(num_rows_HEA)
-
-        for i in range(num_rows_HEA):
-            S_x = HEA.iat[i, 16]  #
-            W_pl = float(2 * S_x)
-            row_number = HEA.iat[i, 0]
-            profile = HEA.iat[i, 1]
-            mass = HEA.iat[i, 8]
-            W_pl_vector_HEA = [row_number, profile, W_pl, mass]
-
-            M_cRD = (W_pl) * 23.5 / 100
-            eta = M_Ed_new / M_cRD
-            Eta_HEA_NEW = round(eta, 2)  # Round to two decimal
-
-            if Eta_HEA_NEW <= 0.9:
-                break
-        print("Now we have Eta =", Eta_HEA_NEW, "for HEA", W_pl_vector_HEA[1], )
+    print("You choice is HEB", HEB.iat[profile_number_HEB, 1], )
+    print("The internal forces with g_d are: M_max =", Truss_MQN_Matrix_HEB[profile_number_HEB][0], "kNm; Q_max =",
+          Truss_MQN_Matrix_HEB[profile_number_HEB][1], "kN; N_max =", -Truss_MQN_Matrix_HEB[profile_number_HEB][2], "kN !")
 
 else:
-    print("Congrats: We can take the choosen profile!")
+    print("Invalid entry. Please enter IPE or HEA or HEB!")
+
+
+
+
 
 
