@@ -1,29 +1,33 @@
 #Hello! This is your tool for a preselection of  a steel frame!
 #First we have to enter the variabels
 
+import math
+import sys
+
 x = 1 #No other variants for static systems are available yet
 
-V = input("Enter the needed Height, Wide and Length of your hall in [m]: (H,W,L): ")
-V_einzeln = V.split(',')
 
-H = V_einzeln[0]
-W = V_einzeln[1]
-L_total = V_einzeln[2]
+while True:
+        V = input("Enter the needed Height, Wide and Length of your hall in [m]: (H,W,L): ")
 
-H = float(H)
-W = float(W)
-L_total = float(L_total)
+        V_einzeln = V.split(',')
 
-if H < 3 or W < 6 or L_total < 15:
-    print("The Height should be between 3 and 20 [m].")
-    print("The Wide should be between 6 and 30 [m].")
-    print("The Length should be between 15 and 200 [m].")
-    quit()
-if H > 20 or W > 30 or L_total > 200:
-    print("The Height should be between 3 and 20 [m].")
-    print("The Wide should be between 6 and 30 [m].")
-    print("The Length should be between 15 and 200 [m].")
-    quit()
+        H = V_einzeln[0]
+        W = V_einzeln[1]
+        L_total = V_einzeln[2]
+
+        H = float(H)
+        W = float(W)
+        L_total = float(L_total)
+        # Check your conditions for valid input
+        if H >= 3 and H <= 20 and W >= 6 and W <= 30 and L_total >= 15 and L_total <= 200:
+            print("Good input we continue")
+            break
+
+        else:
+            print("The Height should be between 3 and 20 [m].")
+            print("The Wide should be between 6 and 30 [m].")
+            print("The Length should be between 15 and 200 [m].")
 
 
 Load =  input("Enter the snow load s_k and the wind load w_k in [kN/m2]: (s_k,w_k): ")
@@ -393,9 +397,6 @@ gk_roof = gk * L_section #kN/m
 print(gk_roof)
 
 import pandas
-
-
-
 import numpy
 
 IPE = []
@@ -655,6 +656,7 @@ gd_vektor = []
 for value in gk_vektor:
     new_value = value * 1.35
     gd_vektor.append(new_value)
+
 gd_vektor = [round(num, 2) for num in gd_vektor]
 
 #print(gd_vektor)
@@ -685,124 +687,186 @@ Truss_MQN_Matrix_HEB = [list(row) for row in zip(*Truss_MQN_Matrix_HEB)]
 #=====================================================================================================================
 #=====================================================================================================================
 #=====================================================================================================================
-# Now starting with the first Static proof to find a profile you can choose
+
+# M-Nachweis generell
+def M_function (W_pl_i, M_ed, f_y):
+    M_pl_Rd_i = W_pl_i * f_y / 100  # kNm
+    eta_M_i = M_ed / M_pl_Rd_i
+
+    return eta_M_i
+
+
+# MN-Nachweis generell
+def MN_interaction (W_pl_i ,A_i ,h_i , t_w_i, b_i, t_f_i ,M_ed ,N_ed, f_y):
+
+    M_pl_Rd_i = W_pl_i * f_y / 100      # kNm
+    N_pl_Rd_i = A_i * f_y          # kN
+    h_w_i = h_i - 2 * t_f_i
+
+    N_pl_Rd_i_red_1 = 0.25 * N_pl_Rd_i
+    N_pl_Rd_i_red_2 = 0.5 * h_w_i * t_w_i * f_y
+    N_pl_Rd_i_red = min(N_pl_Rd_i_red_1, N_pl_Rd_i_red_2)
+
+    if N_ed > N_pl_Rd_i_red:
+
+        n = N_ed/N_pl_Rd_i
+
+        a_1 = (A_i - 2 * b_i * t_f_i)/A_i
+        a_2 = 0.5
+        a = min(a_1, a_2)
+
+        M_N_Rd_1 = M_pl_Rd_i * ((1-n)/(1-0.5*a))
+        M_N_Rd_2 = M_pl_Rd_i
+        M_N_Rd_i = min(M_N_Rd_1,M_N_Rd_2)           # kNm
+
+        eta_MN_i = M_ed / M_N_Rd_i
+
+    else:
+        eta_MN_i = M_ed / M_pl_Rd_i
+
+    return eta_MN_i
+
+# N-Nachweis generell
+def N_buckling (I_z_i,L_cr,A_i,N_ed,f_y):
+
+    E = 21000 #KN/cm2
+    N_pl_Rd_i = A_i * f_y   # kN
+    #print(N_pl_Rd_i)
+    N_cr_z = E * I_z_i * (math.pi**2)/L_cr**2
+
+    lamda = (N_pl_Rd_i/N_cr_z)**(1/2)
+
+    alpha = 0.34 # später noch ändern; verschiedene Fälle
+
+    omega = 0.5 * (1 + alpha * (lamda - 0.2) + lamda**2)
+    Xi = 1/(omega+(omega**2-lamda**2)**(1/2))
+    Xi = min(Xi,1)
+    N_b_Rd = Xi*N_pl_Rd_i/1.1
+
+    eta_N_i = N_ed / N_b_Rd
+
+    return eta_N_i
+
+
 print("You can choose for the truss one of the three profiles:")
-# starting with IPE again
+# Ausnutzung IPE Träger =====================================================================================================================================================
 
 count = 0
-Eta_IPE_vektor = []
+f_y = 23.5
+L_cr = W * 100 # cm   # 2*W/2 because of buckling length
 
-for i in range(num_rows_IPE, 0, -1):
-    i = i-1
-    #print(i)
-    M_Ed_variable = Truss_MQN_Matrix_IPE[i][0]
-    #print(M_Ed_variable)
-    S_x = IPE.iat[i, 16]
-    W_pl_variable = float(2*S_x)
-    M_cRD_variable = W_pl_variable * 23.5 / 100
-    #print(M_cRD_variable)
-    eta_IPE = M_Ed_variable / M_cRD_variable
-    Eta_IPE = round(eta_IPE, 2)  # Round to two decimal
-    #print(Eta_IPE)
+num_rows_XXX = num_rows_IPE
+Eta_M_i_vektor = []
+Eta_MN_i_vektor = []
+Eta_N_i_vektor = []
 
 
-    Eta_IPE_vektor.append(Eta_IPE)
-    count += 1
+for i in range(num_rows_XXX, 0, -1):
+    i = i - 1
 
-    if Eta_IPE >= 0.9:
-        break
+    M_ed = Truss_MQN_Matrix_IPE[i][0] * 1
+    N_ed = Truss_MQN_Matrix_IPE[i][2] * 1
+    S_x_i = IPE.iat[i, 16]
+    A_i = IPE.iat[i, 7]
+    h_i = IPE.iat[i, 2]
+    t_w_i = IPE.iat[i, 4]
+    b_i = IPE.iat[i, 3]
+    t_f_i = IPE.iat[i, 5]
+    I_z_i = IPE.iat[i, 13]
 
-profile_number_IPE = num_rows_IPE - count + 1
-eta_number = count-2
-#print(Eta_IPE_vektor)
-print("IPE",IPE.iat[profile_number_IPE, 1],"with eta =",Eta_IPE_vektor[eta_number],)
+    def Iteration (A_i,h_i,t_w_i,b_i,t_f_i,I_z_i,L_cr,count,Eta_M_i_vektor,Eta_MN_i_vektor,Eta_N_i_vektor):
+        W_pl_i = float(2 * S_x_i)   # cm3
+        A_i = float(A_i)            # cm2
+        h_i = float(h_i) / 10       # cm
+        t_w_i = float(t_w_i) / 10   # cm
+        b_i = float(b_i) / 10       # cm
+        t_f_i = float(t_f_i) / 10   # cm
+        I_z_i = float(I_z_i)        # cm4
 
-# same for HEA
+        #Result_MN_interaction = []
+        Result_MN_interaction = MN_interaction(W_pl_i, A_i, h_i, t_w_i, b_i, t_f_i, M_ed, N_ed,f_y)
 
-count = 0
-Eta_HEA_vektor = []
+        eta_MN_i = Result_MN_interaction
+        Eta_MN_i = round(eta_MN_i, 2)  # Round to two decimal
+        Eta_MN_i_vektor.append(Eta_MN_i)
 
-for i in range(num_rows_HEA, 0, -1):
-    i = i-1
-    #print(i)
-    M_Ed_variable = Truss_MQN_Matrix_HEA[i][0]
-    #print(M_Ed_variable)
-    S_x = HEA.iat[i, 16]
-    W_pl_variable = float(2*S_x)
-    M_cRD_variable = W_pl_variable * 23.5 / 100
-    #print(M_cRD_variable)
-    eta_HEA = M_Ed_variable / M_cRD_variable
-    Eta_HEA = round(eta_HEA, 2)  # Round to two decimal
-    #print(Eta_HEA)
+        Result_M = M_function(W_pl_i, M_ed,f_y)
 
+        eta_M_i = Result_M
+        Eta_M_i = round(eta_M_i, 2)  # Round to two decimal
+        Eta_M_i_vektor.append(Eta_M_i)
 
-    Eta_HEA_vektor.append(Eta_HEA)
-    count += 1
+        Result_N = N_buckling (I_z_i,L_cr,A_i,N_ed,f_y)
 
-    if Eta_HEA >= 0.9:
-        break
+        eta_N_i = Result_N
+        Eta_N_i = round(eta_N_i, 2)  # Round to two decimal
+        Eta_N_i_vektor.append(Eta_N_i)
 
-profile_number_HEA = num_rows_HEA - count + 1
-eta_number = count-2
-#print(Eta_HEA_vektor)
-print("HEA",HEA.iat[profile_number_HEA, 1],"with eta =",Eta_HEA_vektor[eta_number],)
+        Eta_max_vektor = [max(x,y,z) for x,y,z in zip(Eta_M_i_vektor, Eta_MN_i_vektor, Eta_N_i_vektor)]
 
-# same for HEB
+        count += 1
 
-count = 0
-Eta_HEB_vektor = []
-
-for i in range(num_rows_HEB, 0, -1):
-    i = i-1
-    #print(i)
-    M_Ed_variable = Truss_MQN_Matrix_HEB[i][0]
-    #print(M_Ed_variable)
-    S_x = HEB.iat[i, 16]
-    W_pl_variable = float(2*S_x)
-    M_cRD_variable = W_pl_variable * 23.5 / 100
-    #print(M_cRD_variable)
-    eta_HEB = M_Ed_variable / M_cRD_variable
-    Eta_HEB = round(eta_HEB, 2)  # Round to two decimal
-    #print(Eta_HEB)
+        return Eta_max_vektor, count
 
 
-    Eta_HEB_vektor.append(Eta_HEB)
-    count += 1
 
-    if Eta_HEB >= 0.9:
-        break
+    Result_Iteration = Iteration(A_i,h_i,t_w_i,b_i,t_f_i,I_z_i,L_cr,count,Eta_M_i_vektor,Eta_MN_i_vektor,Eta_N_i_vektor)
+    Eta_max_vektor, count = Result_Iteration
 
-profile_number_HEB = num_rows_HEB - count + 1
-eta_number = count-2
-#print(Eta_HEB_vektor)
-print("HEB",HEB.iat[profile_number_HEA, 1],"with eta =",Eta_HEB_vektor[eta_number],)
+    Eta_max_vektor_IPE = Eta_max_vektor
+    Wert = count -1
+    Eta_max_IPE = Eta_max_vektor_IPE[Wert]
+    print("Eta_i =",Eta_max_IPE,)
+    if Eta_max_IPE >= 0.9:
+        if count == 1:
+            print("Die Lasten sind zu hoch! Kein geeignetes IPE Profil gefunden.")
+            Auswahl_IPE = 0
+            break
+        else:
+            profile_number_IPE = num_rows_XXX - count + 1
+            eta_number_IPE = count - 2
+            print("IPE", IPE.iat[profile_number_IPE, 1], "with eta =", Eta_max_vektor_IPE[eta_number_IPE], )
 
-# Choose a profile now
-print("You can now choose a profile for the truss: IPE", IPE.iat[profile_number_IPE, 1], "or HEA", HEA.iat[profile_number_HEA, 1], "or HEB",
-      HEB.iat[profile_number_HEB, 1], )
+            Auswahl_IPE = IPE.iat[profile_number_IPE, 1]
+            break
+
+
+
+
+
+#======================================================================================================================
+# Auswahl und Ausgabe der Schnittgrößen
+#print("You can now choose a profile for the truss: IPE", Auswahl_IPE, "or HEA", Auswahl_HEA, "or HEB",Auswahl_HEB, )
 print("Write IPE or HEA or HEB to choose a profile!")
 
-profile_choice = input("Your profile choice: ")
+while True:
+    profile_choice = input("Your profile choice: ")
 
-if profile_choice == "IPE":
-    print("You choice is IPE", IPE.iat[profile_number_IPE, 1], )
-    print("The internal forces with g_d are: M_max =",Truss_MQN_Matrix_IPE[profile_number_IPE][0],"kNm; Q_max =",Truss_MQN_Matrix_IPE[profile_number_IPE][1],"kN; N_max =",-Truss_MQN_Matrix_IPE[profile_number_IPE][2],"kN !")
+    if (profile_choice == "IPE" or profile_choice == "Ipe" or profile_choice == "ipe") and Auswahl_IPE > 0:
+        print("You choice is IPE", Auswahl_IPE, )
+        print("The internal forces with g_d are: M_max =", Truss_MQN_Matrix_IPE[profile_number_IPE][0], "kNm; Q_max =",
+              Truss_MQN_Matrix_IPE[profile_number_IPE][1], "kN; N_max =", -Truss_MQN_Matrix_IPE[profile_number_IPE][2],
+              "kN !")
+        break
 
+    elif profile_choice == "HEA" or profile_choice == "Hea" or profile_choice == "hea":
+        print("You choice is HEA")
+        break
 
-elif profile_choice == "HEA":
-    print("You choice is HEA", HEA.iat[profile_number_HEA, 1], )
-    print("The internal forces with g_d are: M_max =",Truss_MQN_Matrix_HEA[profile_number_HEA][0],"kNm; Q_max =",Truss_MQN_Matrix_HEA[profile_number_HEA][1],"kN; N_max =",-Truss_MQN_Matrix_HEA[profile_number_HEA][2],"kN !")
+    elif profile_choice == "HEB" or profile_choice == "Heb" or profile_choice == "heb":
+        print("You choice is HEB")
+        break
 
-elif profile_choice == "HEB":
-    print("You choice is HEB", HEB.iat[profile_number_HEB, 1], )
-    print("The internal forces with g_d are: M_max =", Truss_MQN_Matrix_HEB[profile_number_HEB][0], "kNm; Q_max =",
-          Truss_MQN_Matrix_HEB[profile_number_HEB][1], "kN; N_max =", -Truss_MQN_Matrix_HEB[profile_number_HEB][2], "kN !")
-
-else:
-    print("Invalid entry. Please enter IPE or HEA or HEB!")
-
-
-
-
+    else:
+        print("Invalid entry. Please enter another profile Type!")
 
 
+
+# ok wie geht es weiter?
+# Ich will zwei NW führen! MQN NW und Stabilitäts NW
+# Diese sind ziemlich aufwändig. Kann ich das als Funktion machen?
+# Beachte: Für IPE, HEA und HEB ... später dann genau das selbe nochmal für Stütze...
+# Wenn das klappt ist aber eigentlich alles wichtige geschafft
+# danach den Code schöner machen
+# Schnittgrößen neu berechnen? Version 2 und 3 wären damit sehr schnell möglich! ... theoretisch
+# Webseite bauen und grafisch darstellen? Matlab?
